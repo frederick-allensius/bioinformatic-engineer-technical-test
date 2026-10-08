@@ -1,0 +1,4 @@
+# Runtime dependencies only (used by the Docker image).
+fastapi==0.143.0
+uvicorn[standard]==0.54.0
+python-multipart==0.0.32   # multipart/form-data parsing for file uploads
