@@ -88,11 +88,16 @@ function fitToWidth(element, draw) {
 
 // ---------------------------------------------------------------------------- controls
 
+function selectSegment(attribute, value) {
+  for (const button of document.querySelectorAll(`[data-${attribute}]`)) {
+    button.setAttribute("aria-selected", String(button.dataset[attribute] === value));
+  }
+}
+
 function bindSegment(attribute, onSelect) {
-  const buttons = document.querySelectorAll(`[data-${attribute}]`);
-  for (const button of buttons) {
+  for (const button of document.querySelectorAll(`[data-${attribute}]`)) {
     button.addEventListener("click", () => {
-      for (const other of buttons) other.setAttribute("aria-selected", String(other === button));
+      selectSegment(attribute, button.dataset[attribute]);
       onSelect(button.dataset[attribute]);
     });
   }
@@ -102,9 +107,7 @@ function setSource(source) {
   state.source = source;
   $("#upload-pane").hidden = source !== "upload";
   $("#paste-pane").hidden = source !== "paste";
-  for (const b of document.querySelectorAll("[data-source]")) {
-    b.setAttribute("aria-selected", String(b.dataset.source === source));
-  }
+  selectSegment("source", source);
 }
 
 function setMode(mode) {
@@ -378,8 +381,10 @@ function variantsCard(variants, referenceAligned, { annotated = false } = {}) {
   }
   const counts = variants.reduce((acc, v) => ({ ...acc, [v.type]: (acc[v.type] ?? 0) + 1 }), {});
   const summary = h("span", { class: "caption" }, Object.entries(counts).map(([t, n]) => plural(n, t)).join(" · "));
+  const showNotes = annotated && variants.some((v) => v.notes.length);
   const head = ["#", "Position", "Type", "Ref", "Alt"];
-  if (annotated) head.push("Effect", "Protein", "Notes");
+  if (annotated) head.push("Effect", "Protein");
+  if (showNotes) head.push("Notes");
 
   const rows = variants.map((v, index) => {
     const cells = [
@@ -393,9 +398,9 @@ function variantsCard(variants, referenceAligned, { annotated = false } = {}) {
       cells.push(
         h("td", {}, h("span", { class: `status status--${EFFECT_STATUS[v.effect] ?? "neutral"}` }, v.effect.replace("_", " "))),
         h("td", { class: "mono" }, v.protein_change ?? "–"),
-        h("td", { class: "notes" }, v.notes.length ? v.notes.join(" ") : ""),
       );
     }
+    if (showNotes) cells.push(h("td", { class: "notes" }, v.notes.join(" ")));
     const locate = () => flashColumns(variantColumns(referenceAligned, v));
     return h(
       "tr",
@@ -529,6 +534,23 @@ const RENDERERS = { align: renderAlign, translate: renderTranslate, analyze: ren
 
 // ---------------------------------------------------------------------------- wiring
 
+/** Deep links, e.g. /?sample=patient_05&mode=analyze or /?sample=patient_02&mode=translate&frame=2 */
+function applyUrlParameters() {
+  const params = new URLSearchParams(location.search);
+  const mode = params.get("mode");
+  if (mode && Object.hasOwn(MODES, mode)) {
+    selectSegment("mode", mode);
+    setMode(mode);
+  }
+  const frame = params.get("frame");
+  if (["1", "2", "3"].includes(frame)) {
+    selectSegment("frame", frame);
+    state.frame = Number(frame);
+  }
+  const sample = params.get("sample");
+  if (SAMPLES.includes(sample)) loadSample(sample).then(run);
+}
+
 function init() {
   bindSegment("source", setSource);
   bindSegment("mode", setMode);
@@ -575,6 +597,8 @@ function init() {
       /* storage unavailable: theme still applies for this visit */
     }
   });
+
+  applyUrlParameters();
 }
 
 init();
