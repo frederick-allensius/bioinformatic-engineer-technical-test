@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import Depends, File, Request, UploadFile, status
+from fastapi import Depends, File, Form, Request, UploadFile, status
 
 from app.core.config import Settings
 from app.core.errors import APIError
@@ -50,5 +50,33 @@ async def fasta_upload(
     return parse_fasta(decode_fasta_bytes(data), max_length=settings.max_sequence_length)
 
 
+def reading_frame(
+    frame: Annotated[
+        str | None,
+        Form(
+            description="Reading frame: 1, 2 or 3 (default 1).",
+            json_schema_extra={"enum": ["1", "2", "3"]},
+        ),
+    ] = None,
+) -> int:
+    """Parse the optional ``frame`` form field.
+
+    Parsed by hand rather than as ``int`` so that every bad value ("0", "4", "1.5",
+    "abc") gets the same clear message instead of a generic type error.
+    """
+    if frame is None:  # omitted (FastAPI also maps an empty form value to None)
+        return 1
+    value = frame.strip()
+    if value not in {"1", "2", "3"}:
+        raise APIError(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            "invalid_frame",
+            f"frame must be 1, 2 or 3; got {frame!r}.",
+            field="frame",
+        )
+    return int(value)
+
+
 FastaUpload = Annotated[FastaRecord, Depends(fasta_upload)]
 Reference = Annotated[FastaRecord, Depends(get_reference)]
+ReadingFrame = Annotated[int, Depends(reading_frame)]
