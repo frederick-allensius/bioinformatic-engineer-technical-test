@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en" data-theme="light" data-accent="blue">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DNA Analysis</title>
+  <meta name="description" content="Align DNA to REF_001, call variants and translate to protein.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231D4ED8'/%3E%3Cpath d='M11 6c0 7 10 13 10 20M21 6c0 7-10 13-10 20M12 11h8M12 21h8M14 16h4' stroke='white' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/static/design-system.css">
+  <link rel="stylesheet" href="/static/app.css">
+  <script>
+    // Apply the saved/system theme before first paint to avoid a light flash.
+    (function () {
+      var theme = null;
+      try { theme = localStorage.getItem("dna-theme"); } catch (e) { /* storage blocked */ }
+      if (!theme) theme = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      document.documentElement.dataset.theme = theme;
+    })();
+  </script>
+  <script type="module" src="/static/app.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand__mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+          <path d="M8 3c0 6 8 12 8 18M16 3c0 6-8 12-8 18M9 7h6M9 17h6M10.5 12h3"/>
+        </svg>
+      </span>
+      <div>
+        <div class="eyebrow">Reference REF_001 · 300 bp CDS</div>
+        <h1 class="h3">DNA Analysis</h1>
+      </div>
+    </div>
+    <nav class="topbar__actions" aria-label="Utilities">
+      <a class="btn btn--ghost btn--sm" href="/docs" target="_blank" rel="noopener">API docs</a>
+      <button class="btn btn--ghost btn--sm icon-btn" id="theme-toggle" type="button" aria-label="Toggle dark mode">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+          <path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>
+        </svg>
+      </button>
+    </nav>
+  </header>
+
+  <main class="layout">
+    <section class="card panel" aria-labelledby="input-title">
+      <div class="panel__section">
+        <div class="panel__head">
+          <h2 class="title" id="input-title"><span class="step">1</span>Sequence</h2>
+          <div class="segment" role="tablist" aria-label="Input source">
+            <button type="button" role="tab" aria-selected="true" data-source="upload">Upload</button>
+            <button type="button" role="tab" aria-selected="false" data-source="paste">Paste</button>
+          </div>
+        </div>
+
+        <div id="upload-pane">
+          <input type="file" id="file-input" accept=".fasta,.fa,.fna,.fas,.txt,text/plain" hidden>
+          <button type="button" class="dropzone" id="dropzone">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12 16V4M7 9l5-5 5 5M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/>
+            </svg>
+            <span class="dropzone__title">Drop a FASTA file or <u>browse</u></span>
+            <span class="caption">Single record · A, C, G, T, N · up to 1,000 nt</span>
+          </button>
+          <div class="file-pill" id="file-pill" hidden>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+              <path d="M14 3H7a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7z"/><path d="M14 3v4h4"/>
+            </svg>
+            <span class="file-pill__name" id="file-name"></span>
+            <span class="caption tabular" id="file-size"></span>
+            <button type="button" class="btn btn--danger btn--sm" id="file-clear" aria-label="Remove file">Remove</button>
+          </div>
+        </div>
+
+        <div id="paste-pane" hidden>
+          <label class="sr-only" for="paste-input">FASTA text</label>
+          <textarea class="field textarea mono" id="paste-input" spellcheck="false"
+            placeholder="&gt;my_sample&#10;ATGAGTTCGTTCGTGCCTCTACTC..."></textarea>
+        </div>
+
+        <div class="samples">
+          <span class="caption">Or load a sample:</span>
+          <div class="samples__list" id="samples"></div>
+        </div>
+      </div>
+
+      <div class="panel__section">
+        <div class="panel__head">
+          <h2 class="title"><span class="step">2</span>Analysis</h2>
+        </div>
+        <div class="segment segment--full" role="tablist" aria-label="Analysis type">
+          <button type="button" role="tab" aria-selected="true" data-mode="align">Align</button>
+          <button type="button" role="tab" aria-selected="false" data-mode="translate">Translate</button>
+          <button type="button" role="tab" aria-selected="false" data-mode="analyze">Analyze</button>
+        </div>
+        <p class="caption mode-hint" id="mode-hint"></p>
+
+        <div class="frame-control" id="frame-control" hidden>
+          <span class="caption">Reading frame</span>
+          <div class="segment" role="tablist" aria-label="Reading frame">
+            <button type="button" role="tab" aria-selected="true" data-frame="1">Frame 1</button>
+            <button type="button" role="tab" aria-selected="false" data-frame="2">Frame 2</button>
+            <button type="button" role="tab" aria-selected="false" data-frame="3">Frame 3</button>
+          </div>
+        </div>
+
+        <button type="button" class="btn btn--primary btn--lg run-btn" id="run-btn">Run alignment</button>
+      </div>
+    </section>
+
+    <section class="results" id="results" aria-live="polite" aria-busy="false">
+      <div class="empty">
+        <span class="empty__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+            <path d="M8 3c0 6 8 12 8 18M16 3c0 6-8 12-8 18M9 7h6M9 17h6M10.5 12h3"/>
+          </svg>
+        </span>
+        <div class="empty__title">No results yet</div>
+        <div class="empty__hint">Upload or paste a FASTA sequence, pick an analysis and press Run. Sample patient files are one click away.</div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer caption">
+    DNA Analysis API · <a href="/docs">OpenAPI docs</a> · <a href="/redoc">ReDoc</a> · <a href="/api/health">health</a>
+  </footer>
+</body>
+</html>

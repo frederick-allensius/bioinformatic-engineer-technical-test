@@ -1,0 +1,263 @@
+/* ============================================================================
+   CALM-SLATE DESIGN SYSTEM  ·  v2  ·  portable, framework-free
+   Drop this file into any project:  <link rel="stylesheet" href="design-system.css">
+   Theme is driven by two attributes on <html>:
+     data-theme  = "light" | "dark"
+     data-accent = "blue"  | "green"
+   No Tailwind, no build step. Works offline (system fonts) or online (webfonts).
+   v2 (synced to the live Daily Log app): adds the interactive-card hover, the
+   card-hover / modal / drawer elevation tokens, and overlay recipes — modal,
+   right-side drawer, and the dashed "empty state" placeholder.
+   ========================================================================== */
+
+/* ---- 0. FONTS -----------------------------------------------------------
+   The house face is Apple's SF Pro (Display for size, Text for small UI).
+   SF Pro is free ON Apple devices via the `-apple-system` keyword, but is NOT
+   redistributable — so for cross-platform/web we fall back to Inter, which is
+   nearly identical in metrics and open-source. Geist Mono handles numbers/code.
+
+   Online (recommended for slides/infographics): keep the @import below.
+   Offline / self-host: delete the @import and drop Inter + Geist Mono woff2s in,
+   or just rely on the system stack (Apple devices already render real SF Pro).
+   If you have a licensed SF Pro, self-host it and put it first in --font-sans. */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600;700&display=swap');
+
+/* ---- 1. DESIGN TOKENS ---------------------------------------------------- */
+:root{
+  /* neutrals — cool paper, no warmth */
+  --bg:#F5F6F7; --surface:#FFFFFF; --surface-2:#ECEEF0;
+  /* ink ramp — one near-black + 3 muted greys = text hierarchy */
+  --ink:#181A1C; --ink-2:#41464C; --ink-3:#6E747C; --ink-4:#9AA0A8;
+  /* hairlines */
+  --line:#E3E6E9; --line-strong:#CDD2D8;
+  /* accent (overridden by data-accent) + semantic status colors */
+  --accent:#007AFF; --accent-ink:#FFFFFF;
+  --positive:#1F7A4D; --warning:#B06A1E; --danger:#B23B3B; --danger-wash:rgba(178,59,59,.08);
+  --overlay:rgba(20,22,25,.30);
+
+  /* TYPE — SF Pro on Apple, Inter on web, system-ui last. One family for all. */
+  --font-sans:-apple-system,'SF Pro Display','SF Pro Text','Inter',system-ui,Segoe UI,Roboto,sans-serif;
+  --font-display:var(--font-sans);        /* big titles/numbers use the same face, heavier + tighter */
+  --font-mono:'Geist Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+  --tracking:-0.01em;                      /* signature app-wide letter-spacing */
+
+  /* rounding — controls modest, cards generous */
+  --radius-sm:5px; --radius:8px; --radius-lg:16px; --radius-xl:24px;
+
+  /* elevation (light: soft neutral drop shadow, no border needed) */
+  --shadow-sm:0 1px 2px rgba(15,20,28,.04);
+  --shadow-card:0 1px 2px rgba(15,20,28,.04),0 8px 24px rgba(15,20,28,.07);
+  --shadow-card-hover:0 2px 4px rgba(15,20,28,.07),0 8px 20px rgba(15,20,28,.11);
+  --shadow-lg:0 4px 10px rgba(15,20,28,.07),0 16px 36px rgba(15,20,28,.13);
+  --shadow-drawer:0 0 0 1px var(--line),-8px 0 24px rgba(15,20,28,.07);
+  --shadow-modal:0 0 0 1px var(--line),0 20px 50px rgba(15,20,28,.13);
+
+  --glass:color-mix(in srgb, var(--surface) 72%, transparent);
+  --ease:cubic-bezier(.2,.8,.2,1);
+  color-scheme:light;
+}
+/* light-mode accent choices */
+:root[data-accent="blue"]  { --accent:#1D4ED8; }  /* deep systemBlue */
+:root[data-accent="green"] { --accent:#2A754C; }  /* muted forest green */
+
+/* dark mode: same structure, graphite surfaces, hairline-ring elevation */
+:root[data-theme="dark"]{
+  --bg:#0F1113; --surface:#181A1D; --surface-2:#222529;
+  --ink:#E2E4E7; --ink-2:#ADB2B9; --ink-3:#797F89; --ink-4:#4C525B;
+  --line:#24272C; --line-strong:#313640;
+  --accent:#0A84FF; --accent-ink:#FFFFFF;
+  --positive:#6FAE8C; --warning:#D6A05A; --danger:#D77C72; --danger-wash:rgba(215,124,114,.13);
+  --overlay:rgba(0,0,0,.78);
+  --glass:color-mix(in srgb, var(--surface) 65%, transparent);
+  --shadow-sm:0 0 0 1px var(--line);
+  --shadow-card:0 0 0 1px rgba(255,255,255,.07),0 8px 24px rgba(0,0,0,.35);
+  --shadow-card-hover:0 0 0 1px var(--accent),0 8px 24px rgba(0,0,0,.35);
+  --shadow-lg:0 0 0 1px var(--line-strong),0 16px 40px rgba(0,0,0,.6);
+  --shadow-drawer:0 0 0 1px var(--line),-8px 0 28px rgba(0,0,0,.75);
+  --shadow-modal:0 0 0 1px var(--line),0 24px 60px rgba(0,0,0,.85);
+  color-scheme:dark;
+}
+:root[data-theme="dark"][data-accent="blue"]  { --accent:#4D85FF; }
+:root[data-theme="dark"][data-accent="green"] { --accent:#62B98A; }
+
+/* ---- 2. BASE + TYPE SCALE ------------------------------------------------ */
+*{box-sizing:border-box}
+html{background:var(--bg)}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:var(--font-sans); font-size:14px; line-height:1.5;
+  letter-spacing:var(--tracking);           /* the SF-Pro tightness, app-wide */
+  -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+}
+/* headings share the display face + tighter tracking; weight climbs with size */
+h1,h2,h3,h4,h5,h6{margin:0; font-family:var(--font-display); line-height:1.2; letter-spacing:-0.02em}
+
+/* Type-scale utilities — use these instead of ad-hoc sizes.
+   value = font-size / weight / color role */
+.display  {font-size:52px; font-weight:700; letter-spacing:-.03em; line-height:1.05}
+.h1       {font-size:34px; font-weight:700; letter-spacing:-.02em}
+.h2       {font-size:22px; font-weight:600; letter-spacing:-.02em}
+.h3       {font-size:17px; font-weight:600}
+.title    {font-size:15px; font-weight:600}
+.body     {font-size:14px; font-weight:400; color:var(--ink-2)}
+.caption  {font-size:12px; font-weight:400; color:var(--ink-3)}
+.micro    {font-size:11px; font-weight:500; color:var(--ink-4)}
+/* the recurring uppercase kicker above a heading */
+.eyebrow  {font-size:11px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; color:var(--ink-3)}
+/* big display numbers (stats, metrics): display face, tabular, tight */
+.numeral  {font-family:var(--font-display); font-weight:700; letter-spacing:-.02em; font-variant-numeric:tabular-nums}
+.mono     {font-family:var(--font-mono)}
+.tabular  {font-variant-numeric:tabular-nums}
+::selection{color:var(--accent-ink); background:var(--accent)}
+
+/* ---- 3. PROSE (styled markdown / rich text) -----------------------------
+   Add class="prose" to a container of rendered Markdown or long-form copy.
+   Mirrors the app's .markdown-body scale. */
+.prose{color:var(--ink); font-size:14px; line-height:1.7}
+.prose > * + *{margin-top:1em}
+.prose h1{font-size:26px; font-weight:600; line-height:1.3; margin-top:1.4em}
+.prose h2{font-size:20px; font-weight:600; line-height:1.3; margin-top:1.4em}
+.prose h3{font-size:17px; font-weight:600; line-height:1.3; margin-top:1.4em}
+.prose h4{font-size:15px; font-weight:600; line-height:1.3; margin-top:1.4em}
+.prose p{color:var(--ink-2)}
+.prose strong{color:var(--ink); font-weight:600}
+.prose a{color:var(--ink); text-decoration:underline; text-decoration-color:var(--line-strong); text-underline-offset:3px}
+.prose a:hover{text-decoration-color:var(--ink)}
+.prose ul{list-style:disc; padding-left:1.5em; color:var(--ink-2)}
+.prose ol{list-style:decimal; padding-left:1.5em; color:var(--ink-2)}
+.prose li{margin:.25em 0}
+.prose blockquote{border-left:2px solid var(--line-strong); padding-left:1em; color:var(--ink-3); font-style:italic}
+.prose code{font-family:var(--font-mono); font-size:.88em; background:var(--surface-2); padding:.1em .35em; border-radius:var(--radius-sm)}
+.prose pre{background:var(--surface-2); border:1px solid var(--line); border-radius:var(--radius); padding:1em; overflow-x:auto; font-family:var(--font-mono); font-size:13px; line-height:1.5}
+.prose pre code{background:transparent; padding:0}
+.prose hr{border:0; border-top:1px solid var(--line); margin:2em 0}
+.prose table{border-collapse:collapse; width:100%; font-size:13px}
+.prose th,.prose td{border:1px solid var(--line); padding:.5em .75em; text-align:left}
+.prose th{background:var(--surface-2); font-weight:600}
+
+/* ---- 4. CARD ------------------------------------------------------------- */
+.card{background:var(--surface); border-radius:var(--radius-lg); box-shadow:var(--shadow-card); padding:20px}
+.card--flat{box-shadow:none; border:1px solid var(--line)}
+/* clickable card: gentle lift on hover (pair with a real button/link element) */
+.card--interactive{cursor:pointer; transition:box-shadow .15s var(--ease), transform .15s var(--ease)}
+.card--interactive:hover{box-shadow:var(--shadow-card-hover); transform:translateY(-1px)}
+
+/* ---- 5. BUTTONS ---------------------------------------------------------- */
+.btn{display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  height:32px; padding:0 14px; border:0; border-radius:var(--radius);
+  font:inherit; font-size:13px; font-weight:500; cursor:pointer;
+  transition:all .15s var(--ease); white-space:nowrap}
+.btn:active{transform:scale(.98)}
+.btn:disabled{opacity:.4; pointer-events:none}
+.btn--sm{height:28px; padding:0 10px; font-size:12px}
+.btn--lg{height:40px; padding:0 20px; font-size:15px}
+/* PRIMARY — macOS "lit-from-above" gradient (top mixed 14% toward white) */
+.btn--primary{color:var(--accent-ink);
+  background:linear-gradient(180deg, color-mix(in srgb, var(--accent) 86%, white) 0%, var(--accent) 100%);
+  box-shadow:0 1px 2px rgba(0,0,0,.18)}
+.btn--primary:hover{filter:brightness(1.06)}
+.btn--primary:active{filter:brightness(.96); transform:scale(.98)}
+/* SECONDARY — accent wash: 12% fill / 24% border / ink text */
+.btn--secondary{color:var(--ink);
+  background:color-mix(in srgb, var(--accent) 12%, transparent);
+  border:1px solid color-mix(in srgb, var(--accent) 24%, transparent)}
+.btn--secondary:hover{background:color-mix(in srgb, var(--accent) 18%, transparent)}
+/* GHOST — neutral tile: surface→surface-2 gradient + hairline border */
+.btn--ghost{color:var(--ink-2);
+  background:linear-gradient(180deg, var(--surface) 0%, var(--surface-2) 100%);
+  border:1px solid var(--line); box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.btn--ghost:hover{color:var(--ink); border-color:var(--line-strong)}
+/* DANGER — quiet until hovered */
+.btn--danger{color:var(--danger); background:transparent}
+.btn--danger:hover{background:var(--danger-wash)}
+/* focus: accent halo, shared by buttons + fields */
+.btn:focus-visible,.field:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+
+/* form field (input/textarea/select) */
+.field{height:32px; padding:0 10px; border-radius:var(--radius); border:1px solid var(--line);
+  background:var(--surface); color:var(--ink); font:inherit; font-size:13px}
+.field:focus{outline:none; border-color:var(--accent); box-shadow:0 0 0 3.5px color-mix(in srgb, var(--accent) 20%, transparent)}
+
+/* ---- 6. SEGMENTED CONTROL ------------------------------------------------ */
+.segment{display:inline-flex; align-items:center; gap:2px; height:32px; padding:2px;
+  border-radius:9px; background:var(--surface-2); border:1px solid var(--line)}
+.segment button{height:100%; padding:0 10px; border:0; border-radius:7px; background:transparent;
+  font:inherit; font-size:12px; font-weight:500; color:var(--ink-3); cursor:pointer; transition:all .15s var(--ease)}
+.segment button[aria-selected="true"]{background:var(--surface); color:var(--ink); font-weight:600; box-shadow:0 1px 3px rgba(0,0,0,.18)}
+
+/* ---- 7. FILTER BAR ------------------------------------------------------- */
+.filterbar{display:inline-flex; align-items:center; gap:0; padding:4px; border-radius:var(--radius);
+  background:var(--surface-2); border:1px solid var(--line)}
+.filterbar__group{display:inline-flex; align-items:center; gap:2px}
+.filterbar__divider{width:1px; height:24px; margin:0 8px; background:color-mix(in srgb, var(--ink-4) 55%, transparent)}
+
+/* ---- 8. CHIPS / BADGES / STATUS ------------------------------------------ */
+.chip{display:inline-flex; align-items:center; gap:6px; height:26px; padding:0 10px; border-radius:999px;
+  background:var(--surface-2); border:1px solid var(--line); font-size:12px; font-weight:500; color:var(--ink-2)}
+.chip--active{background:var(--ink); color:var(--surface); border-color:var(--ink)}
+.badge{display:inline-flex; align-items:center; justify-content:center; min-width:18px; height:18px; padding:0 5px;
+  border-radius:999px; font-size:10px; font-weight:600; font-variant-numeric:tabular-nums}
+.badge--danger{background:var(--danger); color:#fff}
+.badge--soft{background:color-mix(in srgb, var(--accent) 16%, transparent); color:var(--accent)}
+.status{display:inline-flex; align-items:center; gap:6px; padding:2px 8px; border-radius:999px; font-size:11px; font-weight:600}
+.status--ok{background:color-mix(in srgb, var(--positive) 16%, transparent); color:var(--positive)}
+.status--warn{background:color-mix(in srgb, var(--warning) 16%, transparent); color:var(--warning)}
+.status--bad{background:color-mix(in srgb, var(--danger) 16%, transparent); color:var(--danger)}
+
+/* ---- 9. STAT / METRIC GRID (infographic block) --------------------------- */
+.stat{padding:20px}
+.stat__label{font-size:10px; font-weight:600; letter-spacing:.02em; text-transform:uppercase; color:var(--ink-3)}
+.stat__value{margin-top:8px; font-family:var(--font-display); font-size:34px; font-weight:700; line-height:1; letter-spacing:-.02em; font-variant-numeric:tabular-nums}
+.stat__sub{margin-top:6px; font-size:12px; color:var(--ink-4)}
+.stat-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); border-radius:var(--radius-lg); overflow:hidden; box-shadow:var(--shadow-card)}
+.stat-grid > .stat{background:var(--surface); border-right:1px solid var(--line)}
+.stat-grid > .stat:last-child{border-right:0}
+
+/* ---- 10. DOCK (macOS magnetic dock) -------------------------------------- */
+.dock{display:inline-flex; align-items:flex-end; gap:8px; padding:8px 10px; border-radius:var(--radius-xl);
+  background:var(--glass); border:1px solid var(--line); box-shadow:var(--shadow-lg);
+  -webkit-backdrop-filter:blur(20px) saturate(1.5); backdrop-filter:blur(20px) saturate(1.5)}
+.dock__item{position:relative; width:44px; height:44px; border:0; background:transparent; padding:0; cursor:pointer; transition:transform .18s var(--ease)}
+.dock__item:hover{transform:translateY(-6px) scale(1.12)}          /* fallback for the JS magnify */
+.dock__tile{display:flex; align-items:center; justify-content:center; width:100%; height:100%; position:relative; overflow:hidden;
+  border-radius:14px; border:1px solid var(--line); color:var(--ink-2);
+  background:linear-gradient(180deg, var(--surface) 0%, var(--surface-2) 100%); box-shadow:0 2px 8px rgba(0,0,0,.10)}
+.dock__item:hover .dock__tile{box-shadow:0 8px 24px rgba(0,0,0,.18)}
+.dock__item[aria-current="page"] .dock__tile{border-color:var(--line-strong); color:var(--accent)}
+.dock__tile svg{width:54%; height:54%}
+.dock__tile::after{content:""; position:absolute; inset:0; opacity:.6; background:linear-gradient(135deg,rgba(255,255,255,.14) 0%,transparent 55%)}
+.dock__item:hover .dock__tile::after{opacity:1}
+.dock__divider{align-self:center; width:1px; height:28px; margin:0 2px; background:var(--line-strong)}
+.dock__dot{position:absolute; bottom:-7px; left:50%; transform:translateX(-50%); width:4px; height:4px; border-radius:999px; background:var(--accent)}
+
+/* ---- 11. OVERLAYS: modal · drawer · empty state -------------------------- */
+.scrim{position:fixed; inset:0; background:var(--overlay); z-index:50}
+/* centered modal (put inside a flex-centered .scrim) */
+.modal{position:relative; width:100%; max-width:520px; background:var(--surface);
+  border-radius:var(--radius-lg); box-shadow:var(--shadow-modal); overflow:hidden}
+.modal__head{display:flex; align-items:center; justify-content:space-between; height:56px; padding:0 20px; border-bottom:1px solid var(--line)}
+.modal__title{font-size:15px; font-weight:600; color:var(--ink)}
+.modal__body{padding:16px 20px; max-height:calc(100dvh - 8rem); overflow-y:auto}
+/* right-side detail drawer */
+.drawer{position:fixed; right:0; top:0; height:100vh; width:480px; max-width:100%; background:var(--surface);
+  box-shadow:var(--shadow-drawer); display:flex; flex-direction:column; z-index:51}
+.drawer__head{display:flex; align-items:center; justify-content:space-between; height:64px; padding:0 24px; border-bottom:1px solid var(--line)}
+.drawer__body{flex:1; min-height:0; overflow-y:auto; padding:24px}
+.drawer__foot{border-top:1px solid var(--line); padding:16px; display:flex; justify-content:flex-end; gap:8px}
+/* dashed placeholder that fills its slot instead of collapsing to a lone link */
+.empty{display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:8px;
+  min-height:150px; padding:32px 20px; border-radius:var(--radius-lg); border:1px dashed var(--line-strong); background:var(--surface)}
+.empty__title{font-size:14px; font-weight:500; color:var(--ink-2)}
+.empty__hint{font-size:12px; color:var(--ink-4); max-width:34ch}
+
+/* ---- 12. SLIDE / PAGE FRAME + PRINT (HTML → PDF) ------------------------- */
+.slide{width:1280px; max-width:100%; aspect-ratio:16/9; margin:24px auto; padding:64px;
+  background:var(--surface); border-radius:var(--radius-xl); box-shadow:var(--shadow-lg); position:relative; overflow:hidden}
+.slide__accent{position:absolute; left:0; top:0; bottom:0; width:6px; background:var(--accent)}
+@page{ size:1280px 720px; margin:0; }
+@media print{
+  html,body{background:#fff}
+  *{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }   /* keep tints/accents in the PDF */
+  .no-print{display:none !important}
+  .slide{margin:0; border-radius:0; box-shadow:none; width:1280px; height:720px; page-break-after:always}
+}
