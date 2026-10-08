@@ -1,0 +1,28 @@
+[project]
+name = "dna-analysis-api"
+version = "1.0.0"
+description = "REST API for DNA sequence alignment, variant detection and protein translation."
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+markers = [
+    "slow: property-based / cross-validation tests (deselect with -m 'not slow')",
+]
+
+[tool.coverage.run]
+source = ["app"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF"]
+ignore = ["B008"]  # FastAPI's File()/Form() defaults are idiomatic
