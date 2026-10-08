@@ -1,5 +1,7 @@
 # DNA Analysis API
 
+[![CI](https://github.com/frederick-allensius/bioinformatic-engineer-technical-test/actions/workflows/ci.yml/badge.svg)](https://github.com/frederick-allensius/bioinformatic-engineer-technical-test/actions/workflows/ci.yml)
+
 A small REST API for DNA sequence analysis against a fixed reference (`REF_001`, a 300 bp synthetic coding sequence):
 
 | Endpoint | What it does |
@@ -41,8 +43,8 @@ Built with **FastAPI**. The Needleman-Wunsch aligner and the translator are **im
 ### Run locally (Python 3.11+)
 
 ```bash
-git clone <repo-url> dna-analysis-api
-cd dna-analysis-api
+git clone https://github.com/frederick-allensius/bioinformatic-engineer-technical-test.git
+cd bioinformatic-engineer-technical-test
 
 python -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
